@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, us
 import { User, UserRole, AuditLog, ExpenseCategory, ReceiptStatus, ReceiptData, Employee, TruckAsset, RepairLog } from './types';
 import { HOLIDAYS } from './constants';
 import { extractReceiptData } from './lib/gemini';
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
 // --- Shared State Container ---
 const useAppState = () => {
@@ -224,7 +223,7 @@ const Sidebar: React.FC<{ user: ManagedUser; onLogout: () => void }> = ({ user, 
 const ChatBot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'ai', text: string }[]>([
-    { role: 'ai', text: "Hello! I'm your Shekinah Operations Specialist. Need help navigating the fleet manager, AI receipt scanning, or dispatching?" }
+    { role: 'ai', text: "Hello! I'm your Shekinah Operations Specialist. Need help navigating the fleet manager, receipt scanning, or dispatching?" }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -244,33 +243,11 @@ const ChatBot: React.FC = () => {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setIsTyping(true);
 
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const streamResponse = await ai.models.generateContentStream({
-        model: 'gemini-3-pro-preview',
-        contents: userMsg,
-        config: {
-          systemInstruction: "You are an expert tutor for the 'Shekinah Movers' logistics SaaS. This app features: 1. Overview Dashboard (Real-time spend and fuel), 2. Dispatching (Scheduling missions for drivers), 3. Receipt Intelligence (AI extraction of vendor, TIN, amount via Gemini), 4. Personnel Roster (Driver details and license expiry), 5. Fleet Asset Manager (Truck PMS, health, and registration expiry), 6. Fuel Monitor (Efficiency tracking), and 7. CRM. Be professional, helpful, and concise. Explain features and how to use them within the app interface."
-        }
-      });
-
-      let fullAiText = '';
-      setMessages(prev => [...prev, { role: 'ai', text: '' }]);
-
-      for await (const chunk of streamResponse) {
-        const c = chunk as GenerateContentResponse;
-        fullAiText += c.text;
-        setMessages(prev => {
-          const updated = [...prev];
-          updated[updated.length - 1].text = fullAiText;
-          return updated;
-        });
-      }
-    } catch (error) {
-      setMessages(prev => [...prev, { role: 'ai', text: "Apologies, I'm having trouble connecting to my neural network. Please try again in a moment." }]);
-    } finally {
+    // AI library removed, returning static response
+    setTimeout(() => {
+      setMessages(prev => [...prev, { role: 'ai', text: "I am currently in maintenance mode as my neural network features are disabled." }]);
       setIsTyping(false);
-    }
+    }, 1000);
   };
 
   return (
@@ -286,7 +263,7 @@ const ChatBot: React.FC = () => {
         <div className="fixed bottom-24 right-8 w-96 h-[32rem] bg-white/95 backdrop-blur-xl border border-slate-100 shadow-[0_25px_60px_rgba(0,0,0,0.15)] rounded-[2.5rem] z-[110] flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
           <div className="bg-[#4361EE] p-6 text-white">
             <h3 className="text-lg font-black uppercase tracking-tighter">System Specialist</h3>
-            <p className="text-[9px] font-bold opacity-60 uppercase tracking-widest mt-1">AI Guided Operations Assistant</p>
+            <p className="text-[9px] font-bold opacity-60 uppercase tracking-widest mt-1">Operations Assistant</p>
           </div>
           
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 hide-scrollbar">
@@ -318,7 +295,7 @@ const ChatBot: React.FC = () => {
               className="flex gap-2 bg-white rounded-2xl p-1.5 shadow-sm border border-slate-200 focus-within:border-[#4361EE] transition-all"
             >
               <input 
-                placeholder="How do I scan receipts?" 
+                placeholder="Ask me anything..." 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 className="flex-1 px-4 py-2 text-sm font-medium outline-none bg-transparent"
