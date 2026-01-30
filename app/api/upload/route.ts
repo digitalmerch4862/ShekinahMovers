@@ -28,41 +28,30 @@ export async function POST(req: NextRequest) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = file.type;
 
-    // Senior Logistics Data Auditor Persona
+    // Senior Logistics Auditor Persona for POC
     const systemInstruction = `
 ### ROLE
-You are a Senior Logistics Data Auditor specializing in Philippine trucking expense management for Shekinah Movers. Your primary duty is to transform raw receipt images into structured, audit-ready JSON data.
-
-### OBJECTIVE
-Analyze the provided receipt or invoice image to extract financial data with 100% accuracy. This data will be directly injected into a Supabase 'expenses' table via a Next.js API route.
+You are a Senior Logistics Auditor for Shekinah Movers. Your goal is to showcase "Receipt Intelligence" to potential clients.
 
 ### CONTEXT
-- **Company**: Shekinah Movers.
-- **Current Date**: January 31, 2026.
-- **Tech Stack**: Next.js (App Router), Supabase, Google Generative AI SDK.
+We are presenting a Proof of Concept (POC) for a trucking expense SaaS. The extraction must be fast, accurate, and professional.
 
-### CONSTRAINTS & LOGIC
-1. **NO PREAMBLE**: Output ONLY a valid JSON object. Do not include markdown code blocks (\`\`\`json), explanations, or conversational filler like "Sure" or "Here is the data."
-2. **ZERO-GUESS RULE**: If a field is unreadable or missing, use \`null\`. Never invent data.
-3. **CURRENCY**: Use Philippine Peso (PHP). Extract the number only (e.g., use 1500.50, not "₱1,500.50").
-4. **DATE FORMAT**: Use ISO-8601 (YYYY-MM-DD). If only the day/month is visible, assume the year 2026 unless the image proves otherwise.
-5. **CATEGORIZATION**: You MUST map the expense to exactly one of these categories: ["Fuel", "Toll", "Maintenance", "Food", "Others"].
+### CONSTRAINTS
+- **OUTPUT**: Return ONLY raw JSON. No markdown, no chat.
+- **LOGIC**: 
+  - If the receipt is from a gas station, category is "Fuel".
+  - If it is for food/meals, category is "Food".
+  - If it is for parts or repairs, category is "Maintenance".
+- **CURRENCY**: Convert all amounts to numbers (PHP).
 
-### OUTPUT SCHEMA
+### DATA SCHEMA
 {
-  "vendor_name": "String or null",
-  "date": "String (YYYY-MM-DD) or null",
-  "total_amount": Number or null,
-  "category": "String (Fuel/Toll/Maintenance/Food/Others)",
-  "confidence_score": Number (0.0 to 1.0)
+  "vendor_name": "Name of the shop/station",
+  "date": "YYYY-MM-DD",
+  "total_amount": 0.00,
+  "category": "Fuel | Maintenance | Food | Tolls | Others",
+  "confidence": 0.95
 }
-
-### FEW-SHOT EXAMPLES
-Input: 
-Output: {"vendor_name": "Shell Balintawak", "date": "2026-01-15", "total_amount": 4200, "category": "Fuel", "confidence_score": 0.98}
-
-Input: [Blurry image where only 'Toll' and '50.00' are visible]
-Output: {"vendor_name": null, "date": null, "total_amount": 50, "category": "Toll", "confidence_score": 0.45}
 `;
 
     // Prompt Gemini using gemini-3-flash-preview
@@ -88,14 +77,14 @@ Output: {"vendor_name": null, "date": null, "total_amount": 50, "category": "Tol
           type: Type.OBJECT,
           properties: {
             vendor_name: { type: Type.STRING, nullable: true },
-            date: { type: Type.STRING, description: "Format YYYY-MM-DD", nullable: true },
+            date: { type: Type.STRING, nullable: true },
             total_amount: { type: Type.NUMBER, nullable: true },
             category: { 
               type: Type.STRING, 
-              enum: ["Fuel", "Toll", "Maintenance", "Food", "Others"],
+              enum: ["Fuel", "Maintenance", "Food", "Tolls", "Others"],
               nullable: true
             },
-            confidence_score: { type: Type.NUMBER, description: "Value between 0 and 1", nullable: true }
+            confidence: { type: Type.NUMBER, nullable: true }
           }
         }
       }
@@ -113,7 +102,7 @@ Output: {"vendor_name": null, "date": null, "total_amount": 50, "category": "Tol
           expense_date: extractedData.date,
           amount: extractedData.total_amount,
           category: extractedData.category?.toLowerCase() || 'other',
-          confidence: extractedData.confidence_score,
+          confidence: extractedData.confidence,
           receipt_url: 'pending_storage_upload', 
           created_at: new Date().toISOString()
         }

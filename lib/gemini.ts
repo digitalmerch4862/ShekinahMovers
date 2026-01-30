@@ -2,29 +2,36 @@
 /// <reference lib="esnext" />
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { ReceiptData } from "../types";
+import { ReceiptData, ExpenseCategory } from "../types";
 
 // Initialize the API client
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function extractReceiptData(base64Data: string, mimeType: string): Promise<ReceiptData> {
-  // Senior Logistics Data Auditor Persona
+  // Senior Logistics Auditor Persona for POC
   const systemInstruction = `
 ### ROLE
-You are a Senior Logistics Data Auditor specializing in Philippine trucking expense management. Your goal is to provide high-accuracy data extraction for the Shekinah Movers Management Console.
+You are a Senior Logistics Auditor for Shekinah Movers. Your goal is to showcase "Receipt Intelligence" to potential clients.
 
-### OBJECTIVE
-Analyze the provided receipt image and extract core financial data. Your output is used for automated accounting in a Next.js and Supabase environment.
+### CONTEXT
+We are presenting a Proof of Concept (POC) for a trucking expense SaaS. The extraction must be fast, accurate, and professional.
 
-### CONSTRAINTS & RULES
-* **DO NOT**: Include any conversational text, explanations, or markdown outside the JSON block.
-* **DO NOT**: Guess values. If a field is unreadable, return \`null\`.
-* **DO**: Format all currency as numbers only (e.g., 4200 instead of ₱4,200).
-* **DO**: Use ISO-8601 for all dates (YYYY-MM-DD).
-* **NEGATIVE CONSTRAINT**: Never mention the SDK version or technical build details in the output.
+### CONSTRAINTS
+- **OUTPUT**: Return ONLY raw JSON. No markdown, no chat.
+- **LOGIC**: 
+  - If the receipt is from a gas station, category is "Fuel".
+  - If it is for food/meals, category is "Food".
+  - If it is for parts or repairs, category is "Maintenance".
+- **CURRENCY**: Convert all amounts to numbers (PHP).
 
-### OUTPUT FORMAT
-Return only a valid JSON object matching the provided schema.
+### DATA SCHEMA
+{
+  "vendor_name": "Name of the shop/station",
+  "date": "YYYY-MM-DD",
+  "total_amount": 0.00,
+  "category": "Fuel | Maintenance | Food | Tolls | Others",
+  "confidence": 0.95
+}
 `;
 
   const response = await ai.models.generateContent({
@@ -49,43 +56,14 @@ Return only a valid JSON object matching the provided schema.
         type: Type.OBJECT,
         properties: {
           vendor_name: { type: Type.STRING, nullable: true },
-          vendor_tin: { type: Type.STRING, nullable: true },
-          vendor_branch: { type: Type.STRING, nullable: true },
-          document_type: { 
+          date: { type: Type.STRING, nullable: true },
+          total_amount: { type: Type.NUMBER, nullable: true },
+          category: { 
             type: Type.STRING, 
             nullable: true,
-            enum: ['Official Receipt', 'Sales Invoice', 'Billing Statement', 'Other']
+            enum: ["Fuel", "Maintenance", "Food", "Tolls", "Others"]
           },
-          receipt_date: { type: Type.STRING, nullable: true },
-          currency: { type: Type.STRING, nullable: true },
-          subtotal: { type: Type.NUMBER, nullable: true },
-          tax: { type: Type.NUMBER, nullable: true },
-          total: { type: Type.NUMBER, nullable: true },
-          payment_method: { type: Type.STRING, nullable: true },
-          invoice_or_receipt_no: { type: Type.STRING, nullable: true },
-          line_items: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                description: { type: Type.STRING },
-                quantity: { type: Type.NUMBER },
-                unit_price: { type: Type.NUMBER },
-                amount: { type: Type.NUMBER }
-              }
-            },
-            nullable: true
-          },
-          suggested_category: { 
-            type: Type.STRING, 
-            nullable: true,
-            enum: [
-              'fuel', 'tolls', 'maintenance', 'tires', 'parts', 'parking', 'meals', 'lodging',
-              'supplies', 'insurance', 'permits', 'fees', 'phone_internet', 'office', 'other'
-            ]
-          },
-          category_confidence: { type: Type.NUMBER, nullable: true },
-          notes: { type: Type.STRING, nullable: true }
+          confidence: { type: Type.NUMBER, nullable: true }
         }
       }
     }
@@ -97,5 +75,27 @@ Return only a valid JSON object matching the provided schema.
     throw new Error("No data returned from Gemini.");
   }
 
-  return JSON.parse(text) as ReceiptData;
+  const raw = JSON.parse(text);
+
+  // Map the POC AI output to the robust ReceiptData type expected by the App
+  const result: ReceiptData = {
+    vendor_name: raw.vendor_name,
+    vendor_tin: null,
+    vendor_branch: null,
+    document_type: null,
+    receipt_date: raw.date,
+    currency: 'PHP',
+    subtotal: null,
+    tax: null,
+    total: raw.total_amount,
+    payment_method: null,
+    invoice_or_receipt_no: null,
+    line_items: [],
+    // Safely cast or map the category. The AI returns Capitalized, App expects lowercase enum.
+    suggested_category: raw.category ? raw.category.toLowerCase() as ExpenseCategory : null,
+    category_confidence: raw.confidence || 0,
+    notes: null
+  };
+
+  return result;
 }
