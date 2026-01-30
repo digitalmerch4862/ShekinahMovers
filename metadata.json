@@ -1,0 +1,7 @@
+{
+  "name": "Shekinah Movers",
+  "description": "A robust trucking expense-control SaaS with AI-powered receipt extraction, fuel monitoring with anomaly detection, and CRM capabilities.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
