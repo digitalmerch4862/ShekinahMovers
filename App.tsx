@@ -1195,8 +1195,35 @@ const Receipts: React.FC<{ state: any }> = ({ state }) => {
 };
 
 const Team: React.FC<{ state: any }> = ({ state }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleSaveMember = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const newMember: Employee = {
+      id: Math.random().toString(36).substr(2, 9),
+      fullName: fd.get('fullName') as string,
+      role: fd.get('role') as any,
+      dayOff: fd.get('dayOff') as any,
+      phone: fd.get('phone') as string,
+      licenseNumber: fd.get('licenseNumber') as string,
+      licenseType: fd.get('licenseType') as any,
+      licenseExpiration: fd.get('licenseExpiration') as string,
+    };
+    state.setTeam((prev: Employee[]) => [...prev, newMember]);
+    setIsModalOpen(false);
+  };
+
   return (
     <div className="p-8 mt-32 ml-72 animate-in fade-in duration-700">
+       <div className="flex justify-end mb-10">
+        <button 
+            onClick={() => setIsModalOpen(true)} 
+            className="bg-[#4361EE] text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-2"
+        >
+            <span className="text-xl font-bold">+</span> New Employee
+        </button>
+       </div>
        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {state.team.map((member: any) => (
              <div key={member.id} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-50 flex items-center gap-6">
@@ -1211,6 +1238,65 @@ const Team: React.FC<{ state: any }> = ({ state }) => {
              </div>
           ))}
        </div>
+
+       {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[110] flex items-center justify-center p-6 overflow-y-auto">
+          <div className="bg-white w-full max-w-xl rounded-[3rem] shadow-2xl p-12 animate-in zoom-in-95 duration-300">
+            <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase mb-10 text-center">
+              New Personnel
+            </h3>
+            <form onSubmit={handleSaveMember} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Full Name</label>
+                <input name="fullName" required className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none focus:ring-4 focus:ring-[#4361EE]/5 transition-all" placeholder="Juan Dela Cruz" />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-6">
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Role</label>
+                    <select name="role" className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none">
+                       <option value="Driver">Driver</option>
+                       <option value="Helper">Helper</option>
+                       <option value="Staff">Staff</option>
+                    </select>
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Rest Day</label>
+                    <select name="dayOff" className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none">
+                       {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Weekends'].map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Phone</label>
+                <input name="phone" required className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none focus:ring-4 focus:ring-[#4361EE]/5 transition-all" placeholder="09xx-xxx-xxxx" />
+              </div>
+
+               <div className="pt-4 border-t border-slate-50 mt-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Driver License Details (Optional)</p>
+                  <div className="grid grid-cols-2 gap-6">
+                     <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">License No.</label>
+                        <input name="licenseNumber" className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none" />
+                     </div>
+                     <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Expiry</label>
+                        <input name="licenseExpiration" type="date" className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none" />
+                     </div>
+                  </div>
+               </div>
+
+              <div className="pt-8 flex justify-center gap-8">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="text-xs font-black uppercase text-slate-400 hover:text-slate-900 transition-colors">Abort</button>
+                <button type="submit" className="bg-[#4361EE] text-white px-12 py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/30">
+                  Onboard
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
