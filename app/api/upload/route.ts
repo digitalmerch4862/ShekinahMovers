@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { GoogleGenAI, Type } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase Client
@@ -8,7 +8,7 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,40 +24,42 @@ export async function POST(req: NextRequest) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = file.type;
 
-    // Configure Gemini Model
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      generationConfig: {
+    // Prompt Gemini
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Data
+            }
+          },
+          {
+            text: "Extract receipt data. Return strict JSON."
+          }
+        ]
+      },
+      config: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {
-            vendor_name: { type: SchemaType.STRING },
-            date: { type: SchemaType.STRING, description: "Format YYYY-MM-DD" },
-            total_amount: { type: SchemaType.NUMBER },
+            vendor_name: { type: Type.STRING },
+            date: { type: Type.STRING, description: "Format YYYY-MM-DD" },
+            total_amount: { type: Type.NUMBER },
             category: { 
-              type: SchemaType.STRING, 
+              type: Type.STRING, 
               enum: ["Fuel", "Toll", "Maintenance", "Food", "Others"] 
             },
-            confidence_score: { type: SchemaType.NUMBER, description: "Value between 0 and 1" }
+            confidence_score: { type: Type.NUMBER, description: "Value between 0 and 1" }
           },
           required: ["vendor_name", "date", "total_amount", "category", "confidence_score"]
         }
       }
     });
 
-    // Prompt Gemini
-    const result = await model.generateContent([
-      "Extract receipt data. Return strict JSON.",
-      {
-        inlineData: {
-          data: base64Data,
-          mimeType: mimeType
-        }
-      }
-    ]);
-
-    const extractedData = JSON.parse(result.response.text());
+    const extractedData = JSON.parse(response.text || '{}');
 
     // Insert into Supabase
     const { data, error } = await supabase
