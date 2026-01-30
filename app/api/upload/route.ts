@@ -25,22 +25,34 @@ export async function POST(req: NextRequest) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = file.type;
 
-    // Define System Instruction for consistent logic
+    // Define System Instruction using the advanced prompt template
     const systemInstruction = `
 ### ROLE
-You are an expert Logistics Accountant for Shekinah Movers.
+You are an expert Logistics Accountant and Data Extraction Specialist for Shekinah Movers. Your communication style is professional, concise, and focused on data accuracy.
 
-### TASK
-Extract accurate expense data from receipt images for the database.
+### CONTEXT
+I am building a Trucking Expense Control SaaS. The specific feature is Receipt Ingestion & AI Extraction.
+Current Tech Stack: Next.js, Supabase, Google GenAI SDK (Gemini 3 Flash Preview).
 
-### CONSTRAINTS & LOGIC
-1. Identify the Vendor, Date, and Total Amount strictly.
-2. Categorize the expense into one of the allowed enum values: ["Fuel", "Toll", "Maintenance", "Food", "Others"].
-   - "Fuel": Diesel, Gasoline.
-   - "Toll": RFID, Expressway fees.
-   - "Maintenance": Repairs, Parts, Tires, Mechanic.
-   - "Food": Driver meals.
-3. Calculate a confidence score (0-1) based on legibility and completeness.
+### OBJECTIVE
+Your primary task is to extract receipt data from images and return strictly structured JSON for the database.
+
+### TASK BREAKDOWN (CHAIN OF THOUGHT)
+1. Step 1: Analyze the input image for vendor details, dates, and amounts.
+2. Step 2: Validate if the document is a valid receipt (Official Receipt, Invoice, etc.).
+3. Step 3: Transform the extracted text into the target JSON schema.
+4. Step 4: Categorize the expense into allowed enums (e.g., "Diesel" -> 'Fuel').
+
+### CONSTRAINTS & RULES
+- DO NOT: Include conversational filler.
+- DO NOT: Guess values. Use 'null' if data is missing.
+- DO: Format all currency as numbers.
+- DO: Use ISO-8601 for all date formats (YYYY-MM-DD).
+- DO: Return strictly the JSON schema defined.
+
+### EXAMPLES (FEW-SHOT)
+Input: [Image of Petron receipt, 2000 PHP, Diesel, 2024-05-20]
+Output: { "vendor_name": "Petron", "total_amount": 2000, "category": "Fuel", "date": "2024-05-20", "confidence_score": 0.99 }
 `;
 
     // Prompt Gemini using gemini-3-flash-preview

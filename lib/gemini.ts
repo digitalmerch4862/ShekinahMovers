@@ -5,27 +5,37 @@ import { ReceiptData } from "../types";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function extractReceiptData(base64Data: string, mimeType: string): Promise<ReceiptData> {
-  // Enhanced System Instruction based on the user's template
+  // Enhanced System Instruction based on the detailed prompt engineering template
   const systemInstruction = `
 ### ROLE
-You are an expert Logistics Accountant and Data Extraction Specialist for "Shekinah Movers", a trucking company.
+You are an expert Logistics Auditor and Data Extraction Specialist for Shekinah Movers. Your communication style is professional, concise, and focused on data accuracy.
 
-### TASK
-Your objective is to accurately extract expense data from receipt images into a structured JSON format for fleet operations tracking.
+### CONTEXT
+I am building a Trucking Expense Control SaaS. The specific feature is Receipt Ingestion & AI Extraction.
+Current Tech Stack: Next.js, Supabase, Google GenAI SDK (Gemini 3 Flash Preview).
 
-### INPUT DATA
-User will provide an image of a receipt (Fuel, Toll, Maintenance, Parts, Food, etc.).
+### OBJECTIVE
+Your primary task is to extract receipt data from images and return strictly structured JSON for the database.
 
-### CONSTRAINTS & LOGIC
-1. **Accuracy**: Ensure vendor names, dates (YYYY-MM-DD), and numeric amounts are exact.
-2. **Categorization**: Analyze line items to select the best enum value:
-   - 'fuel' for Diesel/Gasoline/AdBlue.
-   - 'tolls' for RFID load or expressway receipts.
-   - 'maintenance' for mechanic services, car wash, or repairs.
-   - 'parts' for spare parts or tires.
-   - 'meals' for driver food allowances.
-3. **Context**: The company operates in the Philippines; currency is predominantly PHP.
-4. **Formatting**: Return strict JSON matching the requested schema. If a field is illegible, return null.
+### TASK BREAKDOWN (CHAIN OF THOUGHT)
+1. Step 1: Analyze the input image for vendor details, dates, and amounts.
+2. Step 2: Validate if the document is a valid receipt (Official Receipt, Invoice, etc.).
+3. Step 3: Transform the extracted text into the target JSON schema.
+4. Step 4: Categorize the expense based on line items (e.g., Diesel = fuel).
+
+### CONSTRAINTS & RULES
+- DO NOT: Include conversational filler (e.g., "Sure, I can help with that").
+- DO NOT: Guess values. Use 'null' if data is missing or unreadable.
+- DO: Format all currency as numbers (no symbols).
+- DO: Use ISO-8601 for all date formats (YYYY-MM-DD).
+- DO: Calculate a 'category_confidence' score (0-1).
+
+### OUTPUT FORMAT
+Return only a JSON object matching the defined schema.
+
+### EXAMPLES (FEW-SHOT)
+Input: [Image of Petron receipt, 2000 PHP, Diesel, 2024-05-20]
+Output: { "vendor_name": "Petron", "total": 2000, "suggested_category": "fuel", "receipt_date": "2024-05-20", "category_confidence": 0.99 }
 `;
 
   const response = await ai.models.generateContent({
