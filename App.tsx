@@ -1302,40 +1302,11 @@ const Team: React.FC<{ state: any }> = ({ state }) => {
 };
 
 const CRM: React.FC<{ state: any }> = ({ state }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleSaveContact = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const tagsString = fd.get('tags') as string;
-    const tags = tagsString ? tagsString.split(',').map(t => t.trim()) : [];
-    
-    const newContact = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: fd.get('name') as string,
-      company: fd.get('company') as string,
-      phone: fd.get('phone') as string,
-      tags: tags
-    };
-    
-    state.setCrmContacts([...state.crmContacts, newContact]);
-    setIsModalOpen(false);
-  };
-
   return (
     <div className="p-8 mt-32 ml-72 animate-in fade-in duration-700">
-       <div className="flex justify-end mb-10">
-        <button 
-            onClick={() => setIsModalOpen(true)} 
-            className="bg-[#4361EE] text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-2"
-        >
-            <span className="text-xl font-bold">+</span> Add Contact
-        </button>
-       </div>
-
        <div className="space-y-4">
           {state.crmContacts.map((c: any) => (
-             <div key={c.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 flex justify-between items-center group hover:shadow-lg transition-all">
+             <div key={c.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 flex justify-between items-center">
                 <div>
                    <h3 className="font-black text-slate-900">{c.name}</h3>
                    <p className="text-xs text-slate-500">{c.company}</p>
@@ -1351,44 +1322,6 @@ const CRM: React.FC<{ state: any }> = ({ state }) => {
              </div>
           ))}
        </div>
-
-       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[110] flex items-center justify-center p-6 overflow-y-auto">
-          <div className="bg-white w-full max-w-xl rounded-[3rem] shadow-2xl p-12 animate-in zoom-in-95 duration-300">
-            <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase mb-10 text-center">
-              New Network Contact
-            </h3>
-            <form onSubmit={handleSaveContact} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Contact Person</label>
-                <input name="name" required className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none focus:ring-4 focus:ring-[#4361EE]/5 transition-all" placeholder="Name" />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Company / Entity</label>
-                <input name="company" className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none focus:ring-4 focus:ring-[#4361EE]/5 transition-all" placeholder="Company Name" />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Direct Phone</label>
-                <input name="phone" className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none focus:ring-4 focus:ring-[#4361EE]/5 transition-all" placeholder="09xx-xxx-xxxx" />
-              </div>
-
-               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Tags (Comma Separated)</label>
-                <input name="tags" className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none focus:ring-4 focus:ring-[#4361EE]/5 transition-all" placeholder="Vendor, Fuel, Parts..." />
-              </div>
-
-              <div className="pt-8 flex justify-center gap-8">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="text-xs font-black uppercase text-slate-400 hover:text-slate-900 transition-colors">Abort</button>
-                <button type="submit" className="bg-[#4361EE] text-white px-12 py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/30">
-                  Save Contact
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -1401,12 +1334,12 @@ const Settings: React.FC<{ state: any }> = ({ state }) => (
   </div>
 );
 
-const LoginScreen: React.FC<{ users: ManagedUser[]; onLogin: (u: ManagedUser) => void }> = ({ users, onLogin }) => {
+const Login: React.FC<{ onLogin: (u: ManagedUser) => void; users: ManagedUser[] }> = ({ onLogin, users }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const user = users.find(u => u.username === username && u.password === password);
     if (user) {
@@ -1418,85 +1351,65 @@ const LoginScreen: React.FC<{ users: ManagedUser[]; onLogin: (u: ManagedUser) =>
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-500">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-black text-[#4361EE] tracking-tighter uppercase mb-2">Shekinah</h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Management Console</p>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl">
+        <h1 className="text-3xl font-black text-slate-900 text-center mb-2 uppercase tracking-tight">Shekinah</h1>
+        <p className="text-center text-[10px] font-bold text-[#4361EE] uppercase tracking-[0.3em] mb-10">Management Console</p>
+        
+        <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Username</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Operator ID</label>
             <input 
               value={username}
               onChange={e => setUsername(e.target.value)}
-              className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none focus:ring-4 focus:ring-[#4361EE]/5 transition-all"
-              placeholder="Enter username"
+              className="w-full bg-slate-50 rounded-2xl px-6 py-4 text-sm font-black outline-none focus:ring-4 focus:ring-[#4361EE]/10 transition-all"
+              placeholder="Username"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Password</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Access Key</label>
             <input 
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none focus:ring-4 focus:ring-[#4361EE]/5 transition-all"
-              placeholder="••••••••"
+              className="w-full bg-slate-50 rounded-2xl px-6 py-4 text-sm font-black outline-none focus:ring-4 focus:ring-[#4361EE]/10 transition-all"
+              placeholder="Password"
             />
           </div>
-          {error && <p className="text-red-500 text-xs font-bold text-center bg-red-50 p-3 rounded-xl">{error}</p>}
-          <button type="submit" className="w-full bg-[#4361EE] text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all">
+          {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
+          <button type="submit" className="w-full bg-[#4361EE] text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
             Authenticate
           </button>
         </form>
-        <div className="mt-8 text-center">
-            <p className="text-[10px] text-slate-400">Default: admin / 1234</p>
-        </div>
       </div>
     </div>
   );
 };
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<ManagedUser | null>(null);
   const state = useAppState();
-
-  const handleLogin = (u: ManagedUser) => {
-    setUser(u);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-  };
+  const [user, setUser] = useState<ManagedUser | null>(null);
 
   if (!user) {
-    return <LoginScreen users={state.users} onLogin={handleLogin} />;
+    return <Login onLogin={setUser} users={state.users} />;
   }
 
   return (
     <Router>
-      <div className="min-h-screen bg-slate-50/50 font-sans text-slate-900 selection:bg-[#4361EE] selection:text-white pb-12">
-        <Sidebar user={user} onLogout={handleLogout} />
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-600 selection:bg-[#4361EE] selection:text-white">
+        <Sidebar user={user} onLogout={() => setUser(null)} />
         <TopBar />
-        <ChatBot />
-        
         <Routes>
-          <Route path="/" element={user.access.dashboard ? <Dashboard state={state} /> : <Navigate to="/unauthorized" />} />
-          <Route path="/dispatching" element={user.access.dispatching ? <Dispatching state={state} /> : <Navigate to="/unauthorized" />} />
-          <Route path="/trucks" element={user.access.trucks ? <Trucks state={state} /> : <Navigate to="/unauthorized" />} />
-          <Route path="/fuel" element={user.access.fuel ? <FuelMonitor state={state} /> : <Navigate to="/unauthorized" />} />
-          <Route path="/receipts" element={user.access.receipts ? <Receipts state={state} /> : <Navigate to="/unauthorized" />} />
-          <Route path="/team" element={user.access.team ? <Team state={state} /> : <Navigate to="/unauthorized" />} />
-          <Route path="/crm" element={user.access.crm ? <CRM state={state} /> : <Navigate to="/unauthorized" />} />
+          <Route path="/" element={<Dashboard state={state} />} />
+          <Route path="/dispatching" element={<Dispatching state={state} />} />
+          <Route path="/trucks" element={<Trucks state={state} />} />
+          <Route path="/fuel" element={<FuelMonitor state={state} />} />
+          <Route path="/receipts" element={<Receipts state={state} />} />
+          <Route path="/team" element={<Team state={state} />} />
+          <Route path="/crm" element={<CRM state={state} />} />
           <Route path="/settings" element={<Settings state={state} />} />
-          <Route path="/unauthorized" element={
-            <div className="p-8 mt-32 ml-72">
-              <div className="bg-red-50 p-10 rounded-[2.5rem] border border-red-100 text-center">
-                <p className="text-red-400 font-black text-sm uppercase tracking-widest">Access Denied</p>
-              </div>
-            </div>
-          } />
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <ChatBot />
       </div>
     </Router>
   );
