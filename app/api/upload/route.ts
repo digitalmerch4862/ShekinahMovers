@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI, Type } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
+import { Buffer } from 'buffer';
 
 // Initialize Supabase Client
 const supabaseUrl = process.env.SUPABASE_URL!;
@@ -8,7 +9,7 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.API_KEY || '');
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,35 +25,42 @@ export async function POST(req: NextRequest) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = file.type;
 
-    // Configure Gemini Model
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      generationConfig: {
-        responseMimeType: "application/json"
+    // Prompt Gemini using gemini-3-flash-preview
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Data
+            }
+          },
+          {
+            text: "Extract the following data from the receipt image and return as JSON."
+          }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            vendor_name: { type: Type.STRING, nullable: true },
+            date: { type: Type.STRING, description: "Format YYYY-MM-DD", nullable: true },
+            total_amount: { type: Type.NUMBER, nullable: true },
+            category: { 
+              type: Type.STRING, 
+              enum: ["Fuel", "Toll", "Maintenance", "Food", "Others"],
+              nullable: true
+            },
+            confidence_score: { type: Type.NUMBER, description: "Value between 0 and 1", nullable: true }
+          }
+        }
       }
     });
 
-    const prompt = `
-      Extract the following data from the receipt image and return as JSON:
-      - vendor_name
-      - date (YYYY-MM-DD)
-      - total_amount (number)
-      - category (One of: Fuel, Toll, Maintenance, Food, Others)
-      - confidence_score (0-1)
-    `;
-
-    // Prompt Gemini
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: base64Data,
-          mimeType: mimeType
-        }
-      }
-    ]);
-
-    const text = result.response.text();
+    const text = response.text || '{}';
     const extractedData = JSON.parse(text);
 
     // Insert into Supabase
