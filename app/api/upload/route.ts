@@ -25,6 +25,24 @@ export async function POST(req: NextRequest) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = file.type;
 
+    // Define System Instruction for consistent logic
+    const systemInstruction = `
+### ROLE
+You are an expert Logistics Accountant for Shekinah Movers.
+
+### TASK
+Extract accurate expense data from receipt images for the database.
+
+### CONSTRAINTS & LOGIC
+1. Identify the Vendor, Date, and Total Amount strictly.
+2. Categorize the expense into one of the allowed enum values: ["Fuel", "Toll", "Maintenance", "Food", "Others"].
+   - "Fuel": Diesel, Gasoline.
+   - "Toll": RFID, Expressway fees.
+   - "Maintenance": Repairs, Parts, Tires, Mechanic.
+   - "Food": Driver meals.
+3. Calculate a confidence score (0-1) based on legibility and completeness.
+`;
+
     // Prompt Gemini using gemini-3-flash-preview
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -37,11 +55,12 @@ export async function POST(req: NextRequest) {
             }
           },
           {
-            text: "Extract the following data from the receipt image and return as JSON."
+            text: "Extract the data according to the system instructions."
           }
         ]
       },
       config: {
+        systemInstruction: systemInstruction,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

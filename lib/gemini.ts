@@ -5,7 +5,29 @@ import { ReceiptData } from "../types";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function extractReceiptData(base64Data: string, mimeType: string): Promise<ReceiptData> {
-  // Use Gemini 3 Flash Preview for basic text/extraction tasks
+  // Enhanced System Instruction based on the user's template
+  const systemInstruction = `
+### ROLE
+You are an expert Logistics Accountant and Data Extraction Specialist for "Shekinah Movers", a trucking company.
+
+### TASK
+Your objective is to accurately extract expense data from receipt images into a structured JSON format for fleet operations tracking.
+
+### INPUT DATA
+User will provide an image of a receipt (Fuel, Toll, Maintenance, Parts, Food, etc.).
+
+### CONSTRAINTS & LOGIC
+1. **Accuracy**: Ensure vendor names, dates (YYYY-MM-DD), and numeric amounts are exact.
+2. **Categorization**: Analyze line items to select the best enum value:
+   - 'fuel' for Diesel/Gasoline/AdBlue.
+   - 'tolls' for RFID load or expressway receipts.
+   - 'maintenance' for mechanic services, car wash, or repairs.
+   - 'parts' for spare parts or tires.
+   - 'meals' for driver food allowances.
+3. **Context**: The company operates in the Philippines; currency is predominantly PHP.
+4. **Formatting**: Return strict JSON matching the requested schema. If a field is illegible, return null.
+`;
+
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: {
@@ -17,11 +39,12 @@ export async function extractReceiptData(base64Data: string, mimeType: string): 
           }
         },
         {
-          text: "Analyze this receipt image and extract the data into a JSON object."
+          text: "Analyze this receipt image and extract the data."
         }
       ]
     },
     config: {
+      systemInstruction: systemInstruction,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
