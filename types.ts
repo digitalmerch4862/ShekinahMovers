@@ -1,3 +1,4 @@
+/// <reference lib="esnext" />
 
 export enum UserRole {
   ADMIN = 'admin',

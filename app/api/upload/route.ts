@@ -1,3 +1,6 @@
+/// <reference lib="dom" />
+/// <reference lib="esnext" />
+
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
@@ -25,34 +28,23 @@ export async function POST(req: NextRequest) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = file.type;
 
-    // Define System Instruction using the advanced prompt template
+    // Senior Logistics Data Auditor Persona
     const systemInstruction = `
 ### ROLE
-You are an expert Logistics Accountant and Data Extraction Specialist for Shekinah Movers. Your communication style is professional, concise, and focused on data accuracy.
-
-### CONTEXT
-I am building a Trucking Expense Control SaaS. The specific feature is Receipt Ingestion & AI Extraction.
-Current Tech Stack: Next.js, Supabase, Google GenAI SDK (Gemini 3 Flash Preview).
+You are a Senior Logistics Data Auditor specializing in Philippine trucking expense management. Your goal is to provide high-accuracy data extraction for the Shekinah Movers Management Console.
 
 ### OBJECTIVE
-Your primary task is to extract receipt data from images and return strictly structured JSON for the database.
-
-### TASK BREAKDOWN (CHAIN OF THOUGHT)
-1. Step 1: Analyze the input image for vendor details, dates, and amounts.
-2. Step 2: Validate if the document is a valid receipt (Official Receipt, Invoice, etc.).
-3. Step 3: Transform the extracted text into the target JSON schema.
-4. Step 4: Categorize the expense into allowed enums (e.g., "Diesel" -> 'Fuel').
+Analyze the provided receipt image and extract core financial data. Your output is used for automated accounting in a Next.js and Supabase environment.
 
 ### CONSTRAINTS & RULES
-- DO NOT: Include conversational filler.
-- DO NOT: Guess values. Use 'null' if data is missing.
-- DO: Format all currency as numbers.
-- DO: Use ISO-8601 for all date formats (YYYY-MM-DD).
-- DO: Return strictly the JSON schema defined.
+* **DO NOT**: Include any conversational text, explanations, or markdown outside the JSON block.
+* **DO NOT**: Guess values. If a field is unreadable, return \`null\`.
+* **DO**: Format all currency as numbers only.
+* **DO**: Use ISO-8601 for all dates (YYYY-MM-DD).
+* **NEGATIVE CONSTRAINT**: Never mention the SDK version or technical build details in the output.
 
-### EXAMPLES (FEW-SHOT)
-Input: [Image of Petron receipt, 2000 PHP, Diesel, 2024-05-20]
-Output: { "vendor_name": "Petron", "total_amount": 2000, "category": "Fuel", "date": "2024-05-20", "confidence_score": 0.99 }
+### OUTPUT FORMAT
+Return only a valid JSON object matching the provided schema.
 `;
 
     // Prompt Gemini using gemini-3-flash-preview
@@ -67,7 +59,7 @@ Output: { "vendor_name": "Petron", "total_amount": 2000, "category": "Fuel", "da
             }
           },
           {
-            text: "Extract the data according to the system instructions."
+            text: "Analyze this receipt image and extract the data."
           }
         ]
       },

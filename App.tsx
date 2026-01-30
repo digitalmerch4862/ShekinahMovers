@@ -1,3 +1,6 @@
+/// <reference lib="dom" />
+/// <reference lib="esnext" />
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { User, UserRole, AuditLog, ExpenseCategory, ReceiptStatus, ReceiptData, Employee, TruckAsset, RepairLog } from './types';

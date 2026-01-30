@@ -1,3 +1,5 @@
+/// <reference lib="dom" />
+/// <reference lib="esnext" />
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
