@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { HashRouter as Router, Routes, Route, Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { User, UserRole, AuditLog, ExpenseCategory, ReceiptStatus, ReceiptData, Employee, TruckAsset, RepairLog } from './types';
 import { HOLIDAYS } from './constants';
 import { extractReceiptData } from './lib/gemini';
