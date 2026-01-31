@@ -112,6 +112,20 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS dispatches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_name TEXT NOT NULL,
+  pickup_address TEXT NOT NULL,
+  dropoff_address TEXT NOT NULL,
+  dispatch_date DATE NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  driver_id TEXT, -- Storing as TEXT for flexibility during POC, ideally REFERENCES employees(id)
+  status TEXT DEFAULT 'Scheduled',
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- SEED DATA (Password is '1234' - Use crypto for actual app)
 INSERT INTO legacy_users (username, password_hash, role, full_name)
 VALUES 
@@ -123,6 +137,7 @@ ON CONFLICT DO NOTHING;
 CREATE INDEX idx_receipt_status ON receipts(status);
 CREATE INDEX idx_expenses_truck ON expenses(truck_id);
 CREATE INDEX idx_audit_created ON audit_logs(created_at DESC);
+CREATE INDEX idx_dispatch_date ON dispatches(dispatch_date);
 
 -- TRIGGER FOR UPDATED_AT
 CREATE OR REPLACE FUNCTION update_updated_at_column()

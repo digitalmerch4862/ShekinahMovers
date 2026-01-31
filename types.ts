@@ -1,5 +1,3 @@
-/// <reference lib="esnext" />
-
 export enum UserRole {
   ADMIN = 'admin',
   STAFF = 'staff'
@@ -23,12 +21,6 @@ export interface Employee {
   licenseExpiration?: string;
 }
 
-export interface RepairLog {
-  id: string;
-  parts: string;
-  date: string;
-}
-
 export interface TruckAsset {
   id: string;
   plate: string;
@@ -44,7 +36,6 @@ export interface TruckAsset {
   imageUrl?: string;
   parts_repaired?: string;
   date_repaired?: string;
-  repairLogs?: RepairLog[];
 }
 
 export enum ReceiptStatus {
