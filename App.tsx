@@ -5,7 +5,6 @@ import { User, UserRole, AuditLog, ExpenseCategory, ReceiptStatus, ReceiptData, 
 import { HOLIDAYS } from './constants';
 import { extractReceiptData } from './lib/gemini';
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { supabase } from './lib/supabase';
 
 // --- Shared State Container ---
 const useAppState = () => {
@@ -67,8 +66,21 @@ const useAppState = () => {
     { id: '1', receiptNo: 'SHL-99881', vendor: 'Shell Balintawak', date: '2024-05-18', driver: 'Juan Dela Cruz', category: 'fuel', amount: 4200.00, status: 'reviewed', tin: '123-456-789-000' },
   ]);
 
-  // Initial dummy state will be overwritten by Supabase fetch
-  const [dispatches, setDispatches] = useState<Dispatch[]>([]);
+  const [dispatches, setDispatches] = useState<Dispatch[]>([
+    {
+      id: 'd1',
+      customer_name: 'San Miguel Corp',
+      pickup_address: 'Port Area, Manila',
+      dropoff_address: 'Balintawak Warehouse',
+      dispatch_date: new Date().toISOString().split('T')[0],
+      start_time: '08:00',
+      end_time: '12:00',
+      driver_id: '1',
+      status: 'Scheduled',
+      notes: 'Fragile cargo',
+      created_at: new Date().toISOString()
+    }
+  ]);
 
   const [fuelEvents, setFuelEvents] = useState([
     { id: '1', time: '2024-05-19', truck: 'NGS-7788', liters: 84.5, startingOdo: 45200, status: 'Good' },
@@ -77,30 +89,6 @@ const useAppState = () => {
   const [crmContacts, setCrmContacts] = useState([
     { id: '1', name: 'Robert Petron', company: 'Petron Corp Balintawak', phone: '0917-123-4567', tags: ['Vendor', 'Fuel'] },
   ]);
-
-  useEffect(() => {
-    // Fetch initial data from Supabase
-    const fetchDispatches = async () => {
-      const { data, error } = await supabase.from('dispatches').select('*').order('created_at', { ascending: false });
-      if (!error && data) {
-        setDispatches(data as unknown as Dispatch[]);
-      }
-    };
-
-    fetchDispatches();
-
-    // Set up realtime subscription for dispatches
-    const dispatchSubscription = supabase
-      .channel('dispatches-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, (payload) => {
-        fetchDispatches(); // Refetch on any change to keep valid state
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(dispatchSubscription);
-    };
-  }, []);
 
   return {
     users, setUsers,
@@ -256,6 +244,7 @@ const ChatBot: React.FC = () => {
     setIsTyping(true);
 
     try {
+      // Create new instance right before making the call as per guidelines
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const streamResponse = await ai.models.generateContentStream({
         model: 'gemini-3-pro-preview',
@@ -270,7 +259,7 @@ const ChatBot: React.FC = () => {
 
       for await (const chunk of streamResponse) {
         const c = chunk as GenerateContentResponse;
-        fullAiText += c.text; 
+        fullAiText += c.text; // Use the property .text directly
         setMessages(prev => {
           const updated = [...prev];
           updated[updated.length - 1].text = fullAiText;
@@ -433,16 +422,14 @@ const Dispatching: React.FC<{ state: any }> = ({ state }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDispatch, setEditingDispatch] = useState<Dispatch | null>(null);
-  const [loading, setLoading] = useState(false);
   const drivers = state.team.filter((m: Employee) => m.role === 'Driver');
 
   const filteredDispatches = state.dispatches.filter((d: Dispatch) => d.dispatch_date === selectedDate);
 
-  const handleSaveDispatch = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveDispatch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const dispatchData = {
+    const dispatchData: any = {
       customer_name: fd.get('customer') as string,
       pickup_address: fd.get('pickup') as string,
       dropoff_address: fd.get('dropoff') as string,
@@ -451,42 +438,24 @@ const Dispatching: React.FC<{ state: any }> = ({ state }) => {
       end_time: fd.get('end') as string,
       driver_id: fd.get('driver') as string || null,
       notes: fd.get('notes') as string,
-      status: 'Scheduled'
     };
 
-    try {
-      if (editingDispatch) {
-        const { error } = await supabase
-          .from('dispatches')
-          .update(dispatchData)
-          .eq('id', editingDispatch.id);
-
-        if (error) throw error;
-        
-        // Optimistic update
-        state.setDispatches(state.dispatches.map((d: Dispatch) => 
-          d.id === editingDispatch.id ? { ...d, ...dispatchData } : d
-        ));
-      } else {
-        const { data, error } = await supabase
-          .from('dispatches')
-          .insert([dispatchData])
-          .select();
-          
-        if (error) throw error;
-
-        if (data) {
-          state.setDispatches([...state.dispatches, data[0]]);
-        }
-      }
-      setIsModalOpen(false);
-      setEditingDispatch(null);
-    } catch (err) {
-      console.error("Error saving dispatch:", err);
-      alert("Failed to save dispatch. Please check connection.");
-    } finally {
-      setLoading(false);
+    if (editingDispatch) {
+      state.setDispatches(state.dispatches.map((d: Dispatch) => 
+        d.id === editingDispatch.id ? { ...d, ...dispatchData } : d
+      ));
+    } else {
+      const newDispatch: Dispatch = {
+        id: Math.random().toString(36).substr(2, 9),
+        ...dispatchData,
+        status: 'Scheduled',
+        created_at: new Date().toISOString()
+      };
+      state.setDispatches([...state.dispatches, newDispatch]);
     }
+    
+    setIsModalOpen(false);
+    setEditingDispatch(null);
   };
 
   const openEditModal = (d: Dispatch) => {
@@ -591,14 +560,10 @@ const Dispatching: React.FC<{ state: any }> = ({ state }) => {
                   {drivers.map((drv: Employee) => <option key={drv.id} value={drv.id}>{drv.fullName}</option>)}
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Notes</label>
-                <input name="notes" defaultValue={editingDispatch?.notes || ''} className="w-full bg-slate-50 rounded-2xl px-8 py-5 text-sm font-black outline-none focus:ring-4 focus:ring-[#4361EE]/5 transition-all" placeholder="Special instructions..." />
-              </div>
               <div className="pt-8 flex justify-center gap-8">
                 <button type="button" onClick={() => { setIsModalOpen(false); setEditingDispatch(null); }} className="text-xs font-black uppercase text-slate-400 hover:text-slate-900 transition-colors">Abort</button>
-                <button type="submit" disabled={loading} className="bg-[#4361EE] text-white px-12 py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/30 disabled:opacity-50">
-                  {loading ? 'Saving...' : (editingDispatch ? 'Apply Changes' : 'Confirm Dispatch')}
+                <button type="submit" className="bg-[#4361EE] text-white px-12 py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/30">
+                  {editingDispatch ? 'Apply Changes' : 'Confirm Dispatch'}
                 </button>
               </div>
             </form>
@@ -958,6 +923,7 @@ const Team: React.FC<{ state: any }> = ({ state }) => {
     <div className="p-8 mt-32 ml-72 animate-in fade-in duration-700">
       <div className="mb-10 flex justify-between items-center">
         <div>
+          {/* Fixed syntax error: added missing opening tag '<' for h2 */}
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Personnel Roster</h2>
           <p className="text-slate-400 text-sm font-medium mt-1 uppercase tracking-widest">Driver and operations staff management with compliance monitoring.</p>
         </div>
@@ -1729,6 +1695,7 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-[#F1F5F9]">
         <Sidebar user={currentUser} onLogout={() => setCurrentUser(null)} />
         <TopBar />
+        {/* Removed UserFloatingProfile component from here as it's now integrated in Sidebar */}
         <ChatBot />
         <main className="transition-all duration-300 pb-12">
           <Routes>
